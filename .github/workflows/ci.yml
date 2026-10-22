@@ -31,6 +31,14 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
+      - name: Remove unused Intel runner package
+        if: runner.arch == 'X64'
+        # The image's old Azure CLI formula migrates to a cask during brew update,
+        # which otherwise compiles unrelated dependencies on Intel.
+        run: |
+          if brew list --formula azure-cli >/dev/null 2>&1; then
+            brew uninstall --formula --ignore-dependencies azure-cli
+          fi
       - name: Prepare Homebrew
         run: |
           brew update
