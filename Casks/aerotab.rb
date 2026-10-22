@@ -15,7 +15,7 @@ cask "aerotab" do
     strategy :github_latest
   end
 
-  depends_on macos: ">= 26.0"
+  depends_on macos: ">= :tahoe"
 
   app "AeroTab.app"
 
