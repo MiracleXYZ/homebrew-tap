@@ -3,13 +3,17 @@ name: Cask CI
 on:
   push:
     branches: [main]
-    paths: ['Casks/**']
+    paths: ['Casks/**', '.github/workflows/**']
   pull_request:
     paths: ['Casks/**', '.github/workflows/**']
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: cask-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   install:
@@ -18,6 +22,7 @@ jobs:
       matrix:
         runner: [macos-26, macos-26-intel]
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
       HOMEBREW_NO_ANALYTICS: 1
@@ -40,7 +45,7 @@ jobs:
           codesign --verify --strict /Applications/AeroTab.app
           test "$(lipo -archs /Applications/AeroTab.app/Contents/MacOS/AeroTab)" = "$(uname -m)"
           python3 - <<'PYTHON'
-          import os
+          import subprocess
           from pathlib import Path
           import plistlib
           import re
@@ -50,7 +55,8 @@ jobs:
           version = re.search(r'^  version "([^" ]+)"$', cask, re.MULTILINE)[1]
           assert info['CFBundleShortVersionString'] == version
           assert info['CFBundleIdentifier'] == 'dev.miraclexyz.AeroTab'
-          assert not any('com.apple.quarantine' in os.listxattr(path) for path in [app, *app.rglob('*')])
+          attributes = subprocess.check_output(['/usr/bin/xattr', '-r', str(app)], text=True)
+          assert 'com.apple.quarantine' not in attributes
           print('Version, architecture, signature, and quarantine handling verified.')
           PYTHON
       - name: Uninstall test app
