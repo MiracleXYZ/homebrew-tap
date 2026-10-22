@@ -1,0 +1,61 @@
+name: Cask CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['Casks/**']
+  pull_request:
+    paths: ['Casks/**', '.github/workflows/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, macos-26-intel]
+    runs-on: ${{ matrix.runner }}
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_ANALYTICS: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - name: Prepare Homebrew
+        run: |
+          brew update
+          brew tap miraclexyz/tap "$GITHUB_WORKSPACE"
+          brew trust --cask miraclexyz/tap/aerotab
+      - name: Check cask style
+        run: brew style --cask miraclexyz/tap/aerotab
+      - name: Install cask
+        run: brew install --cask miraclexyz/tap/aerotab
+      - name: Verify installed app
+        run: |
+          codesign --verify --strict /Applications/AeroTab.app
+          test "$(lipo -archs /Applications/AeroTab.app/Contents/MacOS/AeroTab)" = "$(uname -m)"
+          python3 - <<'PYTHON'
+          import os
+          from pathlib import Path
+          import plistlib
+          import re
+          app = Path('/Applications/AeroTab.app')
+          info = plistlib.loads((app / 'Contents/Info.plist').read_bytes())
+          cask = Path('Casks/aerotab.rb').read_text()
+          version = re.search(r'^  version "([^" ]+)"$', cask, re.MULTILINE)[1]
+          assert info['CFBundleShortVersionString'] == version
+          assert info['CFBundleIdentifier'] == 'dev.miraclexyz.AeroTab'
+          assert not any('com.apple.quarantine' in os.listxattr(path) for path in [app, *app.rglob('*')])
+          print('Version, architecture, signature, and quarantine handling verified.')
+          PYTHON
+      - name: Uninstall test app
+        if: always()
+        run: |
+          if brew list --cask | grep -qx aerotab; then
+            brew uninstall --cask miraclexyz/tap/aerotab
+          fi
