@@ -1,9 +1,9 @@
 cask "aerotab" do
   arch arm: "arm64", intel: "x86_64"
 
-  version "0.4.0"
-  sha256 arm:   "b053f004742772ef5406484c368c27190cfc15cc79c3adfdb3dfa20e21ea9815",
-         intel: "2ed83ee2ad63b06028a21b1403a51e6f098042ac0f22fc23380b9253fada14d7"
+  version "0.4.1"
+  sha256 arm:   "04d77f09852fe4d87bc76ba9a7d2d4ee8425a471b455de0a9ad3972cac9c5ab8",
+         intel: "979755a1f48406da0462cbd554313db39b3e08ebd1d8d9614919d448a861351b"
 
   url "https://github.com/MiracleXYZ/AeroTab/releases/download/v#{version}/AeroTab-#{version}-#{arch}.zip"
   name "AeroTab"
